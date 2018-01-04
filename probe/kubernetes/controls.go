@@ -78,33 +78,21 @@ func (r *Reporter) CapturePod(f func(xfer.Request, string, string) xfer.Response
 func (r *Reporter) CaptureResource(f func(xfer.Request, string, string, string) xfer.Response) func(xfer.Request) xfer.Response {
 	return func(req xfer.Request) xfer.Response {
 		var resource, uid string
-		for _, parser := range []struct {
-			res string
-			f   func(string) (string, bool)
-		}{
-			{report.Deployment, report.ParseDeploymentNodeID},
-		} {
-			if u, ok := parser.f(req.NodeID); ok {
-				resource, uid = parser.res, u
-				break
-			}
+		if u, ok := report.ParseDeploymentNodeID(req.NodeID); ok {
+			resource, uid = report.Deployment, u
 		}
 		if resource == "" {
 			return xfer.ResponseErrorf("Invalid ID: %s", req.NodeID)
 		}
-
-		switch resource {
-		case report.Deployment:
-			var deployment Deployment
-			r.client.WalkDeployments(func(d Deployment) error {
-				if d.UID() == uid {
-					deployment = d
-				}
-				return nil
-			})
-			if deployment != nil {
-				return f(req, "deployment", deployment.Namespace(), deployment.Name())
+		var deployment Deployment
+		r.client.WalkDeployments(func(d Deployment) error {
+			if d.UID() == uid {
+				deployment = d
 			}
+			return nil
+		})
+		if deployment != nil {
+			return f(req, "deployment", deployment.Namespace(), deployment.Name())
 		}
 		return xfer.ResponseErrorf("%s not found: %s", resource, uid)
 	}
