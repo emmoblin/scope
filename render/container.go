@@ -82,12 +82,13 @@ func (c connectionJoin) Render(rpt report.Report) Nodes {
 			if !found {
 				id, found = ipNodes[report.MakeScopedEndpointNodeID(scope, addr, port)]
 			}
-			if found && id != "" { // not one we blanked out earlier
-				// We are guaranteed to find the id, so really this
-				// should never end up creating a node.
-				return id
+			if !found || id == "" {
+				return ""
 			}
-			return ""
+			// Not an IP we blanked out earlier. We are guaranteed to
+			// find the id, so really this should never end up
+			// creating a node.
+			return id
 		}, c.topology).Render(rpt)
 }
 
